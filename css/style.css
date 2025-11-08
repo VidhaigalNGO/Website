@@ -117,6 +117,81 @@ body {
     height: auto; 
     max-height: 150px; 
 }
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+#activities-container {
+    display: grid; /* Use CSS Grid for a responsive layout */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* 300px wide tiles, filling space */
+    gap: 30px;
+    justify-content: center;
+}
+
+.activity-tile {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow: hidden; /* Ensures image corners are rounded */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-tile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+.activity-tile img {
+    width: 100%;
+    height: 200px; /* Fixed height for images */
+    object-fit: cover; /* Crops images to fit without distortion */
+    display: block; /* Remove extra space below image */
+    border-bottom: 1px solid #eee;
+}
+
+.activity-tile .content {
+    padding: 20px;
+    flex-grow: 1; /* Allows content to take up available space */
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-tile h3 {
+    color: #027c06; 
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+}
+
+.activity-tile strong {
+    color: #027c06; /* Green for event name */
+}
+.activity-tile h4 {
+    color: #01418a;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.activity-tile p {
+    margin-bottom: 10px;
+    font-size: 0.95em;
+}
+
+.loading, .error-message {
+    grid-column: 1 / -1; /* Make messages span all columns */
+    text-align: center;
+    font-size: 1.2em;
+    color: #555;
+    padding: 40px;
+}
+.error-message {
+    color: #dc3545; /* Red for errors */
+    font-weight: bold;
+}
 .footer {
     background-color: #08550b;
     color: white;
