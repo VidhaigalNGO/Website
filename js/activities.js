@@ -3,6 +3,108 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwqpl2WC8LNNBSboEwTpsK5
 
 const activitiesContainer = document.getElementById('activities-container');
 
+function createNoImagePlaceholder() {
+    const noImage = document.createElement('div');
+    noImage.style.backgroundColor = '#e0e0e0';
+    noImage.style.height = '200px';
+    noImage.style.display = 'flex';
+    noImage.style.alignItems = 'center';
+    noImage.style.justifyContent = 'center';
+    noImage.style.color = '#777';
+    noImage.style.fontSize = '0.9em';
+    noImage.textContent = 'No image available';
+    return noImage;
+}
+
+function extractDriveFileId(url) {
+    if (!url) return null;
+
+    const byPath = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+    if (byPath) return byPath[1];
+
+    try {
+        const parsed = new URL(url);
+        const byQuery = parsed.searchParams.get('id');
+        return byQuery || null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function buildImageCandidates(rawUrl) {
+    if (!rawUrl) return [];
+
+    const candidates = [rawUrl.trim()];
+    const driveId = extractDriveFileId(rawUrl);
+
+    if (driveId) {
+        // Different Drive endpoints behave differently depending on sharing/referrer.
+        candidates.push(`https://lh3.googleusercontent.com/d/${driveId}=w1600`);
+        candidates.push(`https://drive.usercontent.google.com/uc?id=${driveId}`);
+        candidates.push(`https://drive.google.com/uc?export=view&id=${driveId}`);
+        candidates.push(`https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`);
+    }
+
+    return [...new Set(candidates)];
+}
+
+function createActivityImageFrame(rawUrl, altText) {
+    const frame = document.createElement('div');
+    frame.style.position = 'relative';
+    frame.style.width = '100%';
+    frame.style.minHeight = '140px';
+    frame.style.backgroundColor = '#f5f5f5';
+    frame.style.borderRadius = '8px';
+    frame.style.overflow = 'hidden';
+
+    const image = document.createElement('img');
+    image.alt = altText;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.referrerPolicy = 'no-referrer';
+    image.style.width = '100%';
+    image.style.height = '100%';
+    image.style.minHeight = '140px';
+    image.style.objectFit = 'cover';
+    image.style.display = 'block';
+
+    const imageCandidates = buildImageCandidates(rawUrl);
+    let candidateIndex = 0;
+
+    const showUnavailableState = function() {
+        frame.innerHTML = '';
+        frame.style.display = 'flex';
+        frame.style.alignItems = 'center';
+        frame.style.justifyContent = 'center';
+        frame.style.color = '#777';
+        frame.style.fontSize = '0.85em';
+        frame.textContent = 'Image unavailable';
+    };
+
+    const loadNextCandidate = function() {
+        if (candidateIndex < imageCandidates.length) {
+            image.src = imageCandidates[candidateIndex++];
+            return;
+        }
+        showUnavailableState();
+        console.warn('Failed to load image from all candidates:', rawUrl);
+    };
+
+    image.onerror = function() {
+        loadNextCandidate();
+    };
+
+    frame.appendChild(image);
+
+    if (imageCandidates.length === 0) {
+        showUnavailableState();
+    } else {
+        loadNextCandidate();
+    }
+
+    return frame;
+}
+
 // Function to create and append an activity tile
 function createActivityTile(activity) {
     const tile = document.createElement('div');
@@ -17,32 +119,30 @@ function createActivityTile(activity) {
     });
 
     // --- Image Section ---
-    if (activity.imageUrls && activity.imageUrls.length > 0) {
-        // Use the first URL for the tile image
-        const firstImageUrl = activity.imageUrls[0]; 
-        
-        const image = document.createElement('img');
-        image.src = firstImageUrl;
-        image.alt = `Photo from ${activity.eventName} on ${dateString}`;
-        image.loading = 'lazy'; // Improve performance by lazy-loading images
-        image.onerror = function() {
-            // Hide the image if it fails to load
-            image.style.display = 'none'; 
-            console.warn('Failed to load image:', firstImageUrl);
-        };
-        tile.appendChild(image);
+    if (Array.isArray(activity.imageUrls) && activity.imageUrls.length > 0) {
+        const imageGallery = document.createElement('div');
+        imageGallery.className = 'activity-image-gallery';
+        imageGallery.style.display = 'grid';
+        imageGallery.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
+        imageGallery.style.gap = '8px';
+
+        const validImageUrls = activity.imageUrls.filter(url => typeof url === 'string' && url.trim() !== '');
+
+        if (validImageUrls.length > 0) {
+            validImageUrls.forEach((rawUrl, index) => {
+                const frame = createActivityImageFrame(
+                    rawUrl,
+                    `Photo ${index + 1} from ${activity.eventName} on ${dateString}`
+                );
+                imageGallery.appendChild(frame);
+            });
+            tile.appendChild(imageGallery);
+        } else {
+            tile.appendChild(createNoImagePlaceholder());
+        }
     } else {
         // Fallback if no image URL is provided
-        const noImage = document.createElement('div');
-        noImage.style.backgroundColor = '#e0e0e0';
-        noImage.style.height = '200px';
-        noImage.style.display = 'flex';
-        noImage.style.alignItems = 'center';
-        noImage.style.justifyContent = 'center';
-        noImage.style.color = '#777';
-        noImage.style.fontSize = '0.9em';
-        noImage.textContent = 'No image available';
-        tile.appendChild(noImage);
+        tile.appendChild(createNoImagePlaceholder());
     }
 
     // --- Content Section (Date, Name, Description) ---
@@ -99,6 +199,7 @@ async function fetchActivities() {
 
                 return safeDateB - safeDateA;
             });
+
             sortedActivities.forEach(activity => {
                 createActivityTile(activity);
             });
