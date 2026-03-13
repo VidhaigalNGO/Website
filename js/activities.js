@@ -126,8 +126,7 @@ function createActivityTile(activity) {
         imageGallery.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
         imageGallery.style.gap = '8px';
 
-        const validImageUrls = activity.imageUrls.filter(url => typeof url === 'string' && url.trim() !== '');
-
+    const validImageUrls = activity.imageUrls.filter(url => typeof url === 'string' && url.trim() !== '').slice(0, 4);
         if (validImageUrls.length > 0) {
             validImageUrls.forEach((rawUrl, index) => {
                 const frame = createActivityImageFrame(
