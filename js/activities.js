@@ -89,7 +89,17 @@ async function fetchActivities() {
         activitiesContainer.innerHTML = ''; 
 
         if (data.activities && data.activities.length > 0) {
-            data.activities.forEach(activity => {
+            const sortedActivities = [...data.activities].sort((a, b) => {
+                // Latest date first (descending). Invalid dates go to the end.
+                const dateA = new Date(a.eventDate).getTime();
+                const dateB = new Date(b.eventDate).getTime();
+
+                const safeDateA = Number.isNaN(dateA) ? -Infinity : dateA;
+                const safeDateB = Number.isNaN(dateB) ? -Infinity : dateB;
+
+                return safeDateB - safeDateA;
+            });
+            sortedActivities.forEach(activity => {
                 createActivityTile(activity);
             });
         } else {
